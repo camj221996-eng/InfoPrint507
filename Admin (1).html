@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin · Graphitech</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1a56db;
+      --dark: #111827;
+      --border: #e5e7eb;
+      --bg: #f3f4f6;
+      --success: #059669;
+      --danger: #dc2626;
+      --warning: #d97706;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: #1f2937;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    header {
+      background: var(--dark);
+      color: white;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+    header h1 { font-size: 18px; font-weight: 700; }
+    header a {
+      color: #93c5fd;
+      font-size: 13px;
+      text-decoration: none;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 16px 60px;
+    }
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .btn {
+      padding: 9px 16px;
+      border-radius: 6px;
+      border: none;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: .15s;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: #1e429f; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-outline {
+      background: white;
+      border: 1px solid var(--border);
+      color: #374151;
+    }
+    .btn-outline:hover { background: #f9fafb; }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+    .search-box {
+      flex: 1;
+      min-width: 200px;
+      padding: 9px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    /* Table */
+    .table-wrap {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th {
+      text-align: left;
+      padding: 10px 12px;
+      background: #f9fafb;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+      color: #6b7280;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f9fafb; }
+
+    .stock-ok { color: var(--success); font-weight: 600; }
+    .stock-low { color: var(--warning); font-weight: 600; }
+    .stock-out { color: var(--danger); font-weight: 600; }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: .2s;
+    }
+    .modal-overlay.open {
+      opacity: 1;
+      visibility: visible;
+    }
+    .modal {
+      background: white;
+      border-radius: 10px;
+      width: min(480px, 94%);
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 40px rgba(0,0,0,.15);
+    }
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h2 { font-size: 16px; font-weight: 700; }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 22px;
+      cursor: pointer;
+      color: #9ca3af;
+    }
+    .modal-body { padding: 20px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: #374151;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(26,86,219,.12);
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .modal-footer {
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .img-preview {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 6px;
+      background: #f3f4f6;
+      border: 1px solid var(--border);
+    }
+    .img-placeholder {
+      width: 60px;
+      height: 60px;
+      background: #f3f4f6;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      border: 1px solid var(--border);
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--dark);
+      color: white;
+      padding: 12px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      z-index: 100;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: .3s;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .empty {
+      text-align: center;
+      padding: 50px 20px;
+      color: #9ca3af;
+    }
+
+    @media (max-width: 700px) {
+      .form-row { grid-template-columns: 1fr; }
+      table { font-size: 13px; }
+      th:nth-child(4), td:nth-child(4),
+      th:nth-child(5), td:nth-child(5) { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🛠️ Admin Graphitech</h1>
+    <a href="index.html" target="_blank">Ver web pública →</a>
+  </header>
+
+  <div class="container">
+    <div class="toolbar">
+      <button class="btn btn-primary" id="btnNew">+ Nuevo producto</button>
+      <input type="search" class="search-box" id="searchAdmin" placeholder="Buscar producto...">
+      <button class="btn btn-outline" id="btnRefresh">↻ Actualizar</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Img</th>
+            <th>Nombre</th>
+            <th>Categoría</th>
+            <th>Precio</th>
+            <th>Stock</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="6" class="empty">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modalTitle">Nuevo producto</h2>
+        <button class="modal-close" id="modalClose">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editId">
+        <div class="form-group">
+          <label>Nombre del producto *</label>
+          <input type="text" id="fNombre" required placeholder="Ej: Tinta Epson T544 Negro">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Precio (USD) *</label>
+            <input type="number" id="fPrecio" step="0.01" min="0" required>
+          </div>
+          <div class="form-group">
+            <label>Stock *</label>
+            <input type="number" id="fStock" min="0" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Categoría</label>
+          <select id="fCategoria">
+            <option value="Tintas">Tintas</option>
+            <option value="Estampado DTF">Estampado DTF</option>
+            <option value="Formato Ancho / Vinil">Formato Ancho / Vinil</option>
+            <option value="Papelería">Papelería</option>
+            <option value="Ropa / Textil">Ropa / Textil</option>
+            <option value="Bolsas">Bolsas</option>
+            <option value="Publicitario">Publicitario</option>
+            <option value="Servicios">Servicios</option>
+            <option value="Rotulación">Rotulación</option>
+            <option value="Stickers">Stickers</option>
+            <option value="Otros">Otros</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Foto del producto</label>
+          <input type="file" id="fFotoFile" accept="image/*">
+          <input type="hidden" id="fImagen">
+          <div id="fotoPreview" style="margin-top:8px;display:none"><img id="fotoPreviewImg" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb"><br><small id="fotoPreviewTxt" style="color:#059669;font-size:12px"></small></div>
+          <small style="color:#6b7280;font-size:12px;display:block;margin-top:4px">Elige la foto desde tu PC. Se guarda junto con el producto, no necesitas link.</small>
+        </div>
+        <div class="form-group">
+          <label>Descripción del producto</label>
+          <textarea id="fDescripcion" rows="5" placeholder="Escribe la descripción completa del producto. Se mostrará en la página de detalle."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Forma de pago</label>
+          <textarea id="fFormaPago" rows="2" placeholder="Ej: Efectivo, Transferencia Yappy, Tarjeta..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Stock mínimo (alerta)</label>
+          <input type="number" id="fStockMin" min="0" value="5">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="btnCancel">Cancelar</button>
+        <button class="btn btn-primary" id="btnSave">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+  <script>
+    firebase.initializeApp({ databaseURL: "https://graphitech-web-default-rtdb.firebaseio.com" });
+    const db = firebase.database();
+    const refInv = db.ref('inventario');
+
+    let products = {};
+    let editingId = null;
+
+    function load() {
+      refInv.once('value').then(snap => {
+        products = snap.val() || {};
+        render();
+      }).catch(err => {
+        document.getElementById('tbody').innerHTML = `<tr><td colspan="6" class="empty">Error: ${err.message}</td></tr>`;
+      });
+    }
+
+    function render() {
+      const q = document.getElementById('searchAdmin').value.toLowerCase().trim();
+      const list = Object.entries(products)
+        .map(([id, p]) => ({ id, ...p }))
+        .filter(p => !q || (p.nombre || '').toLowerCase().includes(q))
+        .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+
+      const tbody = document.getElementById('tbody');
+      if (!list.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="empty">No hay productos</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = list.map(p => {
+        const stockClass = p.stock <= 0 ? 'stock-out' : (p.stock <= (p.stockMin || 5) ? 'stock-low' : 'stock-ok');
+        const img = p.imagen
+          ? `<img class="img-preview" src="${esc(p.imagen)}" alt="" onerror="this.style.display='none'">`
+          : `<div class="img-placeholder">📦</div>`;
+
+        return `<tr>
+          <td>${img}</td>
+          <td><strong>${esc(p.nombre || '')}</strong></td>
+          <td>${esc(p.categoria || '—')}</td>
+          <td>$${(Number(p.precio) || 0).toFixed(2)}</td>
+          <td class="${stockClass}">${p.stock ?? 0}</td>
+          <td>
+            <button class="btn btn-outline btn-sm" onclick="editProduct('${p.id}')">Editar</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">Eliminar</button>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    function esc(t) {
+      const d = document.createElement('div');
+      d.textContent = t;
+      return d.innerHTML;
+    }
+
+    function openModal(title) {
+      document.getElementById('modalTitle').textContent = title;
+      document.getElementById('modal').classList.add('open');
+    }
+    function closeModal() {
+      document.getElementById('modal').classList.remove('open');
+      editingId = null;
+      document.getElementById('editId').value = '';
+      document.getElementById('fNombre').value = '';
+      document.getElementById('fPrecio').value = '';
+      document.getElementById('fStock').value = '';
+      document.getElementById('fCategoria').value = 'Tintas';
+      document.getElementById('fImagen').value = ''; pendingImagen=''; document.getElementById('fFotoFile').value=''; document.getElementById('fotoPreview').style.display='none';
+      document.getElementById('fDescripcion').value = '';
+      document.getElementById('fFormaPago').value = '';
+      document.getElementById('fStockMin').value = '5';
+    }
+
+    window.editProduct = function(id) {
+      const p = products[id];
+      if (!p) return;
+      editingId = id;
+      document.getElementById('editId').value = id;
+      document.getElementById('fNombre').value = p.nombre || '';
+      document.getElementById('fPrecio').value = p.precio || 0;
+      document.getElementById('fStock').value = p.stock || 0;
+      document.getElementById('fCategoria').value = p.categoria || 'Otros';
+      document.getElementById('fImagen').value = p.imagen || '';
+      pendingImagen = p.imagen || '';
+      if(p.imagen){ document.getElementById('fotoPreview').style.display='block'; document.getElementById('fotoPreviewImg').src=p.imagen; document.getElementById('fotoPreviewTxt').textContent='Foto actual guardada'; }
+      document.getElementById('fDescripcion').value = p.descripcion || '';
+      document.getElementById('fFormaPago').value = p.formaPago || '';
+      document.getElementById('fStockMin').value = p.stockMin || 5;
+      openModal('Editar producto');
+    };
+
+    window.deleteProduct = function(id) {
+      const p = products[id];
+      if (!p) return;
+      if (!confirm(`¿Eliminar "${p.nombre}"? Esta acción no se puede deshacer.`)) return;
+      refInv.child(id).remove()
+        .then(() => {
+          delete products[id];
+          render();
+          toast('Producto eliminado');
+        })
+        .catch(err => alert('Error: ' + err.message));
+    };
+
+    document.getElementById('btnNew').addEventListener('click', () => {
+      editingId = null;
+      openModal('Nuevo producto');
+    });
+    document.getElementById('modalClose').addEventListener('click', closeModal);
+    document.getElementById('btnCancel').addEventListener('click', closeModal);
+    document.getElementById('modal').addEventListener('click', e => {
+      if (e.target === document.getElementById('modal')) closeModal();
+    });
+
+    let pendingImagen = '';
+    function comprimirImagen(file){
+      return new Promise((resolve,reject)=>{
+        const reader=new FileReader();
+        reader.onload=e=>{
+          const img=new Image();
+          img.onload=()=>{
+            const max=900; let w=img.width,h=img.height;
+            if(w>max){ h=Math.round(h*max/w); w=max; }
+            if(h>max){ w=Math.round(w*max/h); h=max; }
+            const c=document.createElement('canvas'); c.width=w; c.height=h;
+            c.getContext('2d').drawImage(img,0,0,w,h);
+            resolve(c.toDataURL('image/jpeg',0.82));
+          };
+          img.onerror=reject; img.src=e.target.result;
+        };
+        reader.onerror=reject; reader.readAsDataURL(file);
+      });
+    }
+    document.getElementById('fFotoFile').addEventListener('change', async (e)=>{
+      const file=e.target.files[0]; if(!file) return;
+      document.getElementById('fotoPreviewTxt').textContent='Procesando foto...';
+      document.getElementById('fotoPreview').style.display='block';
+      try{
+        pendingImagen=await comprimirImagen(file);
+        document.getElementById('fImagen').value=pendingImagen;
+        const pv=document.getElementById('fotoPreviewImg'); pv.src=pendingImagen;
+        document.getElementById('fotoPreviewTxt').textContent='✔ Foto lista: '+file.name;
+      }catch(err){ alert('No se pudo leer la foto, intenta con otra'); }
+    });
+    document.getElementById('btnSave').addEventListener('click', () => {
+      const nombre = document.getElementById('fNombre').value.trim();
+      const precio = parseFloat(document.getElementById('fPrecio').value);
+      const stock = parseInt(document.getElementById('fStock').value, 10);
+      const categoria = document.getElementById('fCategoria').value;
+      const imagen = document.getElementById('fImagen').value.trim();
+      const stockMin = parseInt(document.getElementById('fStockMin').value, 10) || 5;
+
+      if (!nombre || isNaN(precio) || isNaN(stock)) {
+        alert('Completa nombre, precio y stock');
+        return;
+      }
+
+      const descripcion = document.getElementById('fDescripcion').value.trim();
+      const formaPago = document.getElementById('fFormaPago').value.trim();
+
+      const data = {
+        nombre,
+        precio,
+        stock,
+        categoria,
+        stockMin,
+        imagen: imagen || null,
+        descripcion: descripcion || '',
+        formaPago: formaPago || '',
+        actualizado: new Date().toISOString()
+      };
+
+      const btn = document.getElementById('btnSave');
+      btn.disabled = true;
+      btn.textContent = 'Guardando...';
+
+      const promise = editingId
+        ? refInv.child(editingId).update(data)
+        : refInv.push(data);
+
+      promise.then(() => {
+        closeModal();
+        load();
+        toast(editingId ? 'Producto actualizado' : 'Producto creado');
+      }).catch(err => {
+        alert('Error al guardar: ' + err.message);
+      }).finally(() => {
+        btn.disabled = false;
+        btn.textContent = 'Guardar';
+      });
+    });
+
+    document.getElementById('searchAdmin').addEventListener('input', render);
+    document.getElementById('btnRefresh').addEventListener('click', load);
+
+    function toast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    load();
+  </script>
+</body>
+</html>
