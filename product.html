@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Producto · InfoPrint</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1a56db;
+      --primary-dark: #1e429f;
+      --dark: #111827;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --bg: #f9fafb;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: white;
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    .topbar {
+      background: var(--dark);
+      color: #d1d5db;
+      font-size: 12px;
+      padding: 6px 0;
+    }
+    .topbar-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 16px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .topbar a { color: #93c5fd; }
+
+    header {
+      background: white;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+    .header-main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 20px;
+      color: var(--dark);
+    }
+    .logo img{height:78px;width:auto;display:block}
+    .back-link {
+      color: var(--muted);
+      font-size: 13px;
+      margin-left: auto;
+    }
+    .back-link:hover { color: var(--primary); }
+
+    .breadcrumb {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 14px 16px 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .breadcrumb a:hover { color: var(--primary); }
+
+    .product-section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 16px 40px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      align-items: start;
+    }
+    @media (max-width: 800px) {
+      .product-section { grid-template-columns: 1fr; gap: 24px; }
+    }
+
+    .gallery {
+      position: sticky;
+      top: 80px;
+    }
+    .main-image {
+      width: 100%;
+      aspect-ratio: 1;
+      background: #f3f4f6;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 80px;
+      overflow: hidden;
+    }
+    .main-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .product-info h1 {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.35;
+      margin-bottom: 10px;
+      color: var(--dark);
+    }
+    .product-cat {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: var(--primary);
+      margin-bottom: 12px;
+    }
+    .product-price {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--dark);
+      margin: 16px 0;
+    }
+    .product-price small {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--muted);
+    }
+    .stock-line {
+      font-size: 13px;
+      margin-bottom: 18px;
+    }
+    .stock-ok { color: #059669; font-weight: 600; }
+    .stock-low { color: #d97706; font-weight: 600; }
+    .stock-out { color: #dc2626; font-weight: 600; }
+
+    .qty-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .qty-control {
+      display: flex;
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .qty-control button {
+      width: 36px; height: 36px;
+      border: none;
+      background: #f9fafb;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .qty-control button:hover { background: #f3f4f6; }
+    .qty-control span {
+      width: 40px;
+      text-align: center;
+      font-weight: 600;
+    }
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 12px 20px;
+      border-radius: 6px;
+      border: none;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: .15s;
+    }
+    .btn-cart {
+      background: var(--dark);
+      color: white;
+      flex: 1;
+      min-width: 140px;
+    }
+    .btn-cart:hover { background: #000; }
+    .btn-cart:disabled { background: #d1d5db; cursor: not-allowed; }
+    .btn-buy {
+      background: var(--primary);
+      color: white;
+      flex: 1;
+      min-width: 140px;
+    }
+    .btn-buy:hover { background: var(--primary-dark); }
+    .btn-buy:disabled { background: #d1d5db; cursor: not-allowed; }
+
+    .payment-box {
+      margin-top: 20px;
+      padding: 14px 16px;
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+    .payment-box strong { display: block; margin-bottom: 4px; color: #0369a1; }
+
+    /* Description section */
+    .desc-section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 16px 60px;
+    }
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+    .tab {
+      padding: 12px 20px;
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--muted);
+      border-bottom: 2px solid transparent;
+      cursor: default;
+    }
+    .tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    .desc-content {
+      font-size: 15px;
+      color: #374151;
+      line-height: 1.7;
+      white-space: pre-wrap;
+    }
+    .desc-content h3 {
+      font-size: 16px;
+      margin: 20px 0 8px;
+      color: var(--dark);
+    }
+    .desc-empty {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    footer {
+      background: var(--dark);
+      color: #9ca3af;
+      padding: 28px 16px;
+      text-align: center;
+      font-size: 13px;
+    }
+    footer a { color: #93c5fd; }
+    footer strong { color: white; }
+
+    .loading, .error {
+      max-width: 1100px;
+      margin: 60px auto;
+      text-align: center;
+      color: var(--muted);
+      padding: 0 16px;
+    }
+    .error { color: #dc2626; }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--dark);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 13px;
+      z-index: 100;
+      opacity: 0;
+      transition: .3s;
+    }
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <span>Envíos a todo Panamá · WhatsApp: <a href="https://wa.me/50760023188" target="_blank">6002-3188</a></span>
+    </div>
+  </div>
+
+  <header>
+    <div class="header-main">
+      <a href="index.html" class="logo">
+        <img src="logo.png" alt="InfoPrint">
+      </a>
+      <a href="javascript:goCatalog()" class="back-link">← Volver al catálogo</a>
+    </div>
+  </header>
+
+  <div id="app">
+    <div class="loading">Cargando producto...</div>
+  </div>
+
+  <footer>
+    <p><strong>InfoPrint</strong> · WhatsApp: <a href="https://wa.me/50760023188" target="_blank">6002-3188</a></p>
+    <p style="margin-top:6px;font-size:12px">© 2026 InfoPrint · Panamá</p>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+  <script>
+    firebase.initializeApp({ databaseURL: "https://graphitech-web-default-rtdb.firebaseio.com" });
+    const db = firebase.database();
+
+    function goCatalog(){ if(history.length>1){ history.back(); } else { location.href='./index.html'; } }
+    const params = new URLSearchParams(location.search);
+    const productId = params.get('id');
+
+    let product = null;
+    let qty = 1;
+
+    function esc(t) {
+      const d = document.createElement('div');
+      d.textContent = t || '';
+      return d.innerHTML;
+    }
+
+    function getIcon(cat) {
+      const map = {
+        'Tintas': '💧', 'Estampado DTF': '👕', 'Formato Ancho / Vinil': '📐',
+        'Papelería': '📄', 'Ropa / Textil': '👔', 'Bolsas': '🛍️',
+        'Publicitario': '🪧', 'Servicios': '🎨', 'Rotulación': '✂️',
+        'Stickers': '🏷️', 'Otros': '📦'
+      };
+      return map[cat] || '📦';
+    }
+
+    function normalizeCategory(cat) {
+      if (!cat || !cat.trim()) return 'Otros';
+      const c = cat.trim().toLowerCase();
+      if (c.includes('tinta')) return 'Tintas';
+      if (c.includes('estampado') || c.includes('dtf')) return 'Estampado DTF';
+      if (c.includes('formato') || c.includes('vinil') || c.includes('banner') || c.includes('impesion') || c.includes('impresión formato')) return 'Formato Ancho / Vinil';
+      if (c.includes('papel') || c.includes('pepel') || c.includes('tarjeta') || c.includes('libreta') || c.includes('ticket')) return 'Papelería';
+      if (c.includes('ropa') || c.includes('tshirt') || c.includes('polo') || c.includes('chaleco') || c.includes('pantalon')) return 'Ropa / Textil';
+      if (c.includes('bolsa')) return 'Bolsas';
+      if (c.includes('publicitario') || c.includes('stand') || c.includes('roll')) return 'Publicitario';
+      if (c.includes('servicio') || c.includes('arte')) return 'Servicios';
+      if (c.includes('rotul')) return 'Rotulación';
+      if (c.includes('sticker')) return 'Stickers';
+      return cat.trim();
+    }
+
+    if (!productId) {
+      document.getElementById('app').innerHTML = '<div class="error">Producto no especificado. <a href="index.html">Volver al catálogo</a></div>';
+    } else {
+      db.ref('inventario/' + productId).once('value').then(snap => {
+        const p = snap.val();
+        if (!p) {
+          document.getElementById('app').innerHTML = '<div class="error">Producto no encontrado. <a href="index.html">Volver al catálogo</a></div>';
+          return;
+        }
+        product = {
+          id: productId,
+          nombre: p.nombre || 'Sin nombre',
+          precio: Number(p.precio) || 0,
+          stock: Number(p.stock) || 0,
+          categoria: normalizeCategory(p.categoria),
+          imagen: p.imagen || null,
+          descripcion: p.descripcion || '',
+          formaPago: p.formaPago || ''
+        };
+        document.title = product.nombre + ' · InfoPrint';
+        render();
+      }).catch(err => {
+        document.getElementById('app').innerHTML = '<div class="error">Error al cargar: ' + err.message + '</div>';
+      });
+    }
+
+    function render() {
+      const inStock = product.stock > 0;
+      const low = product.stock > 0 && product.stock <= 5;
+      let stockHtml = '';
+      if (!inStock) stockHtml = '<span class="stock-out">Agotado</span>';
+      else if (low) stockHtml = `<span class="stock-low">${product.stock} disponibles</span>`;
+      else stockHtml = `<span class="stock-ok">${product.stock} disponibles</span>`;
+
+      const imgHtml = product.imagen
+        ? `<img src="${esc(product.imagen)}" alt="${esc(product.nombre)}" onerror="this.parentElement.innerHTML='${getIcon(product.categoria)}'">`
+        : getIcon(product.categoria);
+
+      const descHtml = product.descripcion
+        ? esc(product.descripcion)
+        : '<span class="desc-empty">Sin descripción disponible.</span>';
+
+      const pagoHtml = product.formaPago
+        ? `<div class="payment-box"><strong>Forma de pago</strong>${esc(product.formaPago)}</div>`
+        : '';
+
+      document.getElementById('app').innerHTML = `
+        <div class="breadcrumb">
+          <a href="index.html">Inicio</a> › 
+          <a href="index.html">${esc(product.categoria)}</a> › 
+          <span>${esc(product.nombre)}</span>
+        </div>
+
+        <section class="product-section">
+          <div class="gallery">
+            <div class="main-image" id="mainImage">${imgHtml}</div>
+          </div>
+
+          <div class="product-info">
+            <div class="product-cat">${esc(product.categoria)}</div>
+            <h1>${esc(product.nombre)}</h1>
+            <div class="product-price">$${product.precio.toFixed(2)} <small>USD</small></div>
+            <div class="stock-line">${stockHtml}</div>
+
+            <div class="qty-row">
+              <div class="qty-control">
+                <button type="button" onclick="changeQty(-1)">−</button>
+                <span id="qtyVal">1</span>
+                <button type="button" onclick="changeQty(1)">+</button>
+              </div>
+            </div>
+
+            <div class="btn-row">
+              <button class="btn btn-cart" id="btnAdd" ${!inStock ? 'disabled' : ''} onclick="addToCart()">
+                🛒 Añadir al carrito
+              </button>
+              <button class="btn btn-buy" id="btnBuy" ${!inStock ? 'disabled' : ''} onclick="buyNow()">
+                ⚡ Comprar
+              </button>
+            </div>
+
+            ${pagoHtml}
+          </div>
+        </section>
+
+        <section class="desc-section">
+          <div class="tabs">
+            <div class="tab active">Descripción</div>
+          </div>
+          <div class="desc-content">${descHtml}</div>
+        </section>
+      `;
+    }
+
+    window.changeQty = function(d) {
+      if (!product) return;
+      qty = Math.max(1, Math.min(product.stock || 1, qty + d));
+      document.getElementById('qtyVal').textContent = qty;
+    };
+
+    function getCart() {
+      return JSON.parse(localStorage.getItem('infoprint_cart') || '{}');
+    }
+    function saveCart(cart) {
+      localStorage.setItem('infoprint_cart', JSON.stringify(cart));
+    }
+
+    window.addToCart = function() {
+      if (!product || product.stock <= 0) return;
+      const cart = getCart();
+      if (!cart[product.id]) {
+        cart[product.id] = {
+          id: product.id,
+          nombre: product.nombre,
+          precio: product.precio,
+          stock: product.stock,
+          categoria: product.categoria,
+          qty: 0
+        };
+      }
+      const newQty = Math.min(product.stock, (cart[product.id].qty || 0) + qty);
+      cart[product.id].qty = newQty;
+      saveCart(cart);
+      showToast('✓ Añadido al carrito');
+    };
+
+    window.buyNow = function() {
+      if (!product || product.stock <= 0) return;
+      const total = (product.precio * qty).toFixed(2);
+      let msg = `¡Hola InfoPrint! 👋%0AQuiero comprar:%0A%0A`;
+      msg += `• ${product.nombre} x${qty} = $${total}%0A`;
+      msg += `%0A*Total: $${total} USD*%0A%0A¿Me confirman disponibilidad y forma de pago?`;
+      window.open(`https://wa.me/50760023188?text=${msg}`, '_blank');
+    };
+
+    function showToast(txt) {
+      const t = document.getElementById('toast');
+      t.textContent = txt;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2000);
+    }
+  </script>
+</body>
+</html>
