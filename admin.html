@@ -266,7 +266,7 @@
   <div class="container">
   <div class="cat-box">
     <h3>📂 Categorías y subcategorías</h3>
-    <p>Crea una categoría, por ejemplo <b>Impresoras</b>, y dentro de ella sus subcategorías: <b>Plotter, Cabezal, Tintas</b>. Todo se puede editar o borrar.</p>
+    <p>Crea una categoría, por ejemplo <b>Fotocopiadoras</b>, dentro un modelo <b>Ricoh C2010</b>, y dentro de ese modelo sus piezas: <b>Cabezal, Tintas, Rodillo</b>. Cada modelo tiene sus propias piezas.</p>
     <div class="cat-row">
       <input type="text" id="newCatName" placeholder="Nueva categoría: Ej: Impresoras" style="flex:1;min-width:200px">
       <button class="btn btn-primary" id="btnAddCat">+ Crear categoría</button>
@@ -330,13 +330,22 @@
           </div>
         </div>
         <div class="form-group">
-          <label>Subcategoría</label>
+          <label>Modelo</label>
+          <select id="fModelo"><option value="">Sin modelo / Todos los modelos</option></select>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <input type="text" id="fNuevoModelo" placeholder="O crea un modelo: Ej: Ricoh C2010, Ricoh C5102" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:6px">
+            <button type="button" class="btn btn-outline btn-sm" id="btnCrearModeloEnProducto">+ Crear</button>
+          </div>
+          <small style="color:#6b7280;font-size:12px">Ejemplo: Categoría <b>Fotocopiadoras</b> → Modelo <b>Ricoh C2010</b></small>
+        </div>
+        <div class="form-group">
+          <label>Subcategoría / Pieza de ese modelo</label>
           <select id="fSubcategoria"><option value="">Sin subcategoría</option></select>
           <div style="display:flex;gap:8px;margin-top:6px">
-            <input type="text" id="fNuevaSubcategoria" placeholder="O crea una subcategoría: Ej: Plotter, Cabezal, Tintas" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:6px">
+            <input type="text" id="fNuevaSubcategoria" placeholder="O crea una pieza de ese modelo: Ej: Cabezal, Tintas, Rodillo, Fusor" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:6px">
             <button type="button" class="btn btn-outline btn-sm" id="btnCrearSubEnProducto">+ Crear</button>
           </div>
-          <small style="color:#6b7280;font-size:12px">Ejemplo: Categoría <b>Impresoras</b> → Subcategoría <b>Plotter</b> / <b>Cabezal</b> / <b>Tintas</b></small>
+          <small style="color:#6b7280;font-size:12px">Ejemplo: <b>Fotocopiadoras</b> → <b>Ricoh C2010</b> → <b>Cabezal / Tintas / Rodillo</b></small>
         </div>
         <div class="form-group">
           <label>Foto del producto</label>
@@ -380,29 +389,49 @@
     let editingId = null;
 
 
-    // ===== CATEGORÍAS Y SUBCATEGORÍAS (editables) =====
+    // ===== CATEGORÍAS > MODELO > SUBCATEGORÍA (3 niveles, editables) =====
+    // Estructura en Firebase /categorias: { nombre, modelos:[ {nombre, subcategorias:[...]} ] }
     function getCatByName(nombre){ return Object.entries(categorias).find(([id,c])=>c.nombre===nombre); }
-    function refreshCategoriaSelects(selCat, selSub){
+    function getModelos(catNombre){ const f=getCatByName(catNombre); if(!f) return []; return f[1].modelos || []; }
+    function getModelo(catNombre, modeloNombre){ return getModelos(catNombre).find(m=>m.nombre===modeloNombre); }
+    function refreshCategoriaSelects(selCat, selModelo, selSub){
       const sel=document.getElementById('fCategoria'); if(!sel) return;
       const names=Object.values(categorias).map(c=>c.nombre).sort();
       sel.innerHTML = names.length ? names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('') : '<option value="Otros">Otros</option>';
       if(selCat && names.includes(selCat)) sel.value=selCat;
-      refreshSubSelect(sel.value, selSub);
+      refreshModeloSelect(sel.value, selModelo, selSub);
     }
-    function refreshSubSelect(catNombre, selSub){
+    function refreshModeloSelect(catNombre, selModelo, selSub){
+      const sel=document.getElementById('fModelo'); if(!sel) return;
+      const modelos=getModelos(catNombre);
+      sel.innerHTML='<option value="">Sin modelo / Todos los modelos</option>'+modelos.map(m=>`<option value="${esc(m.nombre)}">${esc(m.nombre)}</option>`).join('');
+      if(selModelo && modelos.some(m=>m.nombre===selModelo)) sel.value=selModelo;
+      refreshSubSelect(catNombre, sel.value, selSub);
+    }
+    function refreshSubSelect(catNombre, modeloNombre, selSub){
       const sel=document.getElementById('fSubcategoria'); if(!sel) return;
-      const found=getCatByName(catNombre); const subs=found ? (found[1].subcategorias||[]) : [];
+      const mod=getModelo(catNombre, modeloNombre); const subs=mod ? (mod.subcategorias||[]) : [];
       sel.innerHTML='<option value="">Sin subcategoría</option>'+subs.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
       if(selSub && subs.includes(selSub)) sel.value=selSub;
     }
+    function saveCat(id){ refCat.child(id).set(categorias[id]); }
     function crearCategoriaSync(nombre){
       if(!nombre) return; if(getCatByName(nombre)) return;
-      const id=refCat.push().key; categorias[id]={nombre, subcategorias:[]}; refCat.child(id).set({nombre, subcategorias:[]}); renderCats(); refreshCategoriaSelects(nombre);
+      const id=refCat.push().key; categorias[id]={nombre, modelos:[]}; saveCat(id); renderCats(); refreshCategoriaSelects(nombre);
     }
-    function agregarSubSync(catNombre, sub){
-      if(!catNombre||!sub) return; const found=getCatByName(catNombre); if(!found) return;
-      const [id,c]=found; const subs=c.subcategorias||[]; if(subs.includes(sub)) return;
-      subs.push(sub); categorias[id].subcategorias=subs; refCat.child(id).update({subcategorias:subs}); renderCats(); refreshSubSelect(catNombre, sub);
+    function crearModeloSync(catNombre, modeloNombre){
+      if(!catNombre||!modeloNombre) return; const found=getCatByName(catNombre); if(!found) return;
+      const [id,c]=found; c.modelos=c.modelos||[]; if(c.modelos.some(m=>m.nombre===modeloNombre)) return;
+      c.modelos.push({nombre:modeloNombre, subcategorias:[]}); saveCat(id); renderCats(); refreshModeloSelect(catNombre, modeloNombre);
+    }
+    function agregarSubSync(catNombre, modeloNombre, sub){
+      if(!catNombre||!sub) return;
+      if(!modeloNombre){ // sin modelo: lo guardamos en un modelo "General"
+        crearModeloSync(catNombre,'General'); modeloNombre='General';
+      }
+      const mod=getModelo(catNombre, modeloNombre); if(!mod) return;
+      mod.subcategorias=mod.subcategorias||[]; if(mod.subcategorias.includes(sub)) return;
+      mod.subcategorias.push(sub); const [id]=getCatByName(catNombre); saveCat(id); renderCats(); refreshSubSelect(catNombre, modeloNombre, sub);
     }
     function renderCats(){
       const box=document.getElementById('catList'); if(!box) return;
@@ -417,24 +446,45 @@
               <button class="btn btn-danger btn-sm" onclick="borrarCat('${id}')">Eliminar</button>
             </span>
           </div>
-          <div style="margin-top:8px">${(c.subcategorias||[]).length ? (c.subcategorias||[]).map(s=>`<span class="sub-chip">${esc(s)} <button onclick="borrarSub('${id}','${esc(s)}')">×</button></span>`).join('') : '<small style="color:#6b7280">Sin subcategorías todavía</small>'}</div>
-          <div style="display:flex;gap:8px;margin-top:10px">
-            <input type="text" id="sub-${id}" placeholder="Nueva subcategoría: Ej: Plotter" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:6px">
-            <button class="btn btn-outline btn-sm" onclick="agregarSubDesdeLista('${id}')">+ Subcategoría</button>
+          <div style="margin-top:10px">${(c.modelos||[]).length ? (c.modelos||[]).map((m,mi)=>`
+            <div style="background:white;border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px">
+              <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>🔹 ${esc(m.nombre)}</b><span><button class="btn btn-outline btn-sm" onclick="renombrarModelo('${id}',${mi})">Editar</button> <button class="btn btn-danger btn-sm" onclick="borrarModelo('${id}',${mi})">Eliminar modelo</button></span></div>
+              <div style="margin-top:6px">${(m.subcategorias||[]).length ? (m.subcategorias||[]).map(s=>`<span class="sub-chip">${esc(s)} <button onclick="borrarSub('${id}',${mi},'${esc(s)}')">×</button></span>`).join('') : '<small style="color:#6b7280">Sin piezas / subcategorías todavía</small>'}</div>
+              <div style="display:flex;gap:8px;margin-top:8px"><input type="text" id="sub-${id}-${mi}" placeholder="Nueva pieza de ${esc(m.nombre)}: Ej: Cabezal, Tintas, Rodillo" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:6px"><button class="btn btn-outline btn-sm" onclick="agregarSubDesdeLista('${id}',${mi})">+ Pieza</button></div>
+            </div>`).join('') : '<small style="color:#6b7280">Sin modelos todavía. Agrega uno abajo.</small>'}
+          </div>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <input type="text" id="modelo-${id}" placeholder="Nuevo modelo en ${esc(c.nombre)}: Ej: Ricoh C2010" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:6px">
+            <button class="btn btn-outline btn-sm" onclick="agregarModeloDesdeLista('${id}')">+ Modelo</button>
           </div>
         </div>`).join('');
     }
-    window.renombrarCat=function(id){ const nuevo=prompt('Nuevo nombre de categoría:', categorias[id].nombre); if(!nuevo||!nuevo.trim()) return; categorias[id].nombre=nuevo.trim(); refCat.child(id).update({nombre:nuevo.trim()}); renderCats(); refreshCategoriaSelects(); toast('Categoría actualizada'); };
-    window.borrarCat=function(id){ if(!confirm(`¿Eliminar la categoría "${categorias[id].nombre}" y sus subcategorías? Los productos que la usen quedan sin categoría.`)) return; delete categorias[id]; refCat.child(id).remove(); renderCats(); refreshCategoriaSelects(); toast('Categoría eliminada'); };
-    window.borrarSub=function(id,sub){ if(!confirm(`¿Eliminar subcategoría "${sub}"?`)) return; categorias[id].subcategorias=(categorias[id].subcategorias||[]).filter(s=>s!==sub); refCat.child(id).update({subcategorias:categorias[id].subcategorias}); renderCats(); refreshSubSelect(categorias[id].nombre); toast('Subcategoría eliminada'); };
-    window.agregarSubDesdeLista=function(id){ const inp=document.getElementById('sub-'+id); const v=inp.value.trim(); if(!v) return; agregarSubSync(categorias[id].nombre, v); inp.value=''; toast('Subcategoría agregada'); };
+    window.renombrarCat=function(id){ const nuevo=prompt('Nuevo nombre de categoría:', categorias[id].nombre); if(!nuevo||!nuevo.trim()) return; categorias[id].nombre=nuevo.trim(); saveCat(id); renderCats(); refreshCategoriaSelects(); toast('Categoría actualizada'); };
+    window.borrarCat=function(id){ if(!confirm(`¿Eliminar la categoría "${categorias[id].nombre}" con todos sus modelos y piezas?`)) return; delete categorias[id]; refCat.child(id).remove(); renderCats(); refreshCategoriaSelects(); toast('Categoría eliminada'); };
+    window.renombrarModelo=function(id,mi){ const m=categorias[id].modelos[mi]; const nuevo=prompt('Nuevo nombre del modelo:', m.nombre); if(!nuevo||!nuevo.trim()) return; m.nombre=nuevo.trim(); saveCat(id); renderCats(); refreshCategoriaSelects(); toast('Modelo actualizado'); };
+    window.borrarModelo=function(id,mi){ if(!confirm(`¿Eliminar el modelo "${categorias[id].modelos[mi].nombre}" y sus piezas?`)) return; categorias[id].modelos.splice(mi,1); saveCat(id); renderCats(); refreshCategoriaSelects(); toast('Modelo eliminado'); };
+    window.borrarSub=function(id,mi,sub){ if(!confirm(`¿Eliminar "${sub}" de este modelo?`)) return; const m=categorias[id].modelos[mi]; m.subcategorias=(m.subcategorias||[]).filter(s=>s!==sub); saveCat(id); renderCats(); toast('Pieza eliminada'); };
+    window.agregarModeloDesdeLista=function(id){ const inp=document.getElementById('modelo-'+id); const v=inp.value.trim(); if(!v) return; crearModeloSync(categorias[id].nombre, v); inp.value=''; toast('Modelo agregado'); };
+    window.agregarSubDesdeLista=function(id,mi){ const inp=document.getElementById('sub-'+id+'-'+mi); const v=inp.value.trim(); if(!v) return; agregarSubSync(categorias[id].nombre, categorias[id].modelos[mi].nombre, v); inp.value=''; toast('Pieza agregada'); };
 
     function load() {
       refCat.once('value').then(snap => {
         categorias = snap.val() || {};
+        // Migrar categorías viejas (2 niveles) a 3 niveles sin borrar nada
+        let migrated=false;
+        Object.entries(categorias).forEach(([id,c])=>{
+          if(!c.modelos){
+            if(c.nombre==='Fotocopiadoras'){
+              c.modelos=[{nombre:'Ricoh C2010',subcategorias:['Cabezal','Tintas','Rodillo','Unidad de imagen']},{nombre:'Ricoh C5102',subcategorias:['Cabezal','Tintas','Rodillo','Fusor']}];
+            } else if(c.subcategorias && c.subcategorias.length){
+              c.modelos=[{nombre:'General',subcategorias:c.subcategorias}];
+            } else { c.modelos=[]; }
+            delete c.subcategorias; refCat.child(id).set(c); migrated=true;
+          }
+        });
         if(!Object.keys(categorias).length){
           // Primeras categorías de ejemplo, editables
-          const seed={c1:{nombre:'Impresoras',subcategorias:['Plotter','Cabezal','Tintas']},c2:{nombre:'Tintas',subcategorias:['Sublimación','DTF','Ecosolvente']},c3:{nombre:'Estampado DTF',subcategorias:[]}};
+          const seed={c1:{nombre:'Fotocopiadoras',modelos:[{nombre:'Ricoh C2010',subcategorias:['Cabezal','Tintas','Rodillo','Unidad de imagen']},{nombre:'Ricoh C5102',subcategorias:['Cabezal','Tintas','Rodillo','Fusor']}]},c2:{nombre:'Impresoras',modelos:[{nombre:'Plotter',subcategorias:['Cabezal','Tintas']}]},c3:{nombre:'Tintas',modelos:[{nombre:'General',subcategorias:['Sublimación','DTF','Ecosolvente']}]}};
           refCat.set(seed); categorias=seed;
         }
         renderCats(); refreshCategoriaSelects();
@@ -469,7 +519,7 @@
         return `<tr>
           <td>${img}</td>
           <td><strong>${esc(p.nombre || '')}</strong></td>
-          <td>${esc(p.categoria || '—')}${p.subcategoria ? ` <span style='color:#6b7280'>› ${esc(p.subcategoria)}</span>` : ''}</td>
+          <td>${esc(p.categoria || '—')}${p.modelo ? ` <span style='color:#2563eb'>› ${esc(p.modelo)}</span>` : ''}${p.subcategoria ? ` <span style='color:#6b7280'>› ${esc(p.subcategoria)}</span>` : ''}</td>
           <td>$${(Number(p.precio) || 0).toFixed(2)}</td>
           <td class="${stockClass}">${p.stock ?? 0}</td>
           <td>
@@ -497,7 +547,7 @@
       document.getElementById('fNombre').value = '';
       document.getElementById('fPrecio').value = '';
       document.getElementById('fStock').value = '';
-      document.getElementById('fCategoria').innerHTML=''; document.getElementById('fSubcategoria').innerHTML='<option value="">Sin subcategoría</option>'; document.getElementById('fNuevaCategoria').value=''; document.getElementById('fNuevaSubcategoria').value=''; refreshCategoriaSelects();
+      document.getElementById('fCategoria').innerHTML=''; document.getElementById('fSubcategoria').innerHTML='<option value="">Sin subcategoría</option>'; document.getElementById('fNuevaCategoria').value=''; document.getElementById('fNuevoModelo').value=''; document.getElementById('fNuevaSubcategoria').value=''; refreshCategoriaSelects();
       document.getElementById('fImagen').value = ''; pendingImagen=''; document.getElementById('fFotoFile').value=''; document.getElementById('fotoPreview').style.display='none';
       document.getElementById('fDescripcion').value = '';
       document.getElementById('fFormaPago').value = '';
@@ -512,7 +562,7 @@
       document.getElementById('fNombre').value = p.nombre || '';
       document.getElementById('fPrecio').value = p.precio || 0;
       document.getElementById('fStock').value = p.stock || 0;
-      refreshCategoriaSelects(p.categoria || '', p.subcategoria || '');
+      refreshCategoriaSelects(p.categoria || '', p.modelo || '', p.subcategoria || '');
       document.getElementById('fImagen').value = p.imagen || '';
       pendingImagen = p.imagen || '';
       if(p.imagen){ document.getElementById('fotoPreview').style.display='block'; document.getElementById('fotoPreviewImg').src=p.imagen; document.getElementById('fotoPreviewTxt').textContent='Foto actual guardada'; }
@@ -576,17 +626,22 @@
       }catch(err){ alert('No se pudo leer la foto, intenta con otra'); }
     });
     document.getElementById('btnAddCat').addEventListener('click', ()=>{ const v=document.getElementById('newCatName').value.trim(); if(!v) return alert('Escribe el nombre de la categoría'); crearCategoriaSync(v); document.getElementById('newCatName').value=''; toast('Categoría creada'); });
-    document.getElementById('fCategoria').addEventListener('change', e=>refreshSubSelect(e.target.value));
-    document.getElementById('btnCrearCatEnProducto').addEventListener('click', ()=>{ const v=document.getElementById('fNuevaCategoria').value.trim(); if(!v) return alert('Escribe la categoría'); crearCategoriaSync(v); document.getElementById('fNuevaCategoria').value=''; toast('Categoría creada'); });
-    document.getElementById('btnCrearSubEnProducto').addEventListener('click', ()=>{ const cat=document.getElementById('fNuevaCategoria').value.trim()||document.getElementById('fCategoria').value; const v=document.getElementById('fNuevaSubcategoria').value.trim(); if(!v) return alert('Escribe la subcategoría'); agregarSubSync(cat,v); document.getElementById('fNuevaSubcategoria').value=''; toast('Subcategoría creada'); });
+    document.getElementById('fCategoria').addEventListener('change', e=>refreshModeloSelect(e.target.value));
+    document.getElementById('fModelo').addEventListener('change', e=>refreshSubSelect(document.getElementById('fCategoria').value, e.target.value));
+    document.getElementById('btnCrearModeloEnProducto').addEventListener('click', ()=>{ const cat=document.getElementById('fNuevaCategoria').value.trim()||document.getElementById('fCategoria').value; const v=document.getElementById('fNuevoModelo').value.trim(); if(!v) return alert('Escribe el modelo'); crearModeloSync(cat,v); document.getElementById('fNuevoModelo').value=''; toast('Modelo creado'); });
+    document.getElementById('btnCrearCatEnProducto').addEventListener('click', ()=>{ const v=document.getElementById('fNuevaCategoria').value.trim(); if(!v) return alert('Escribe la categoría'); crearCategoriaSync(v); document.getElementById('fNuevaCategoria').value=''; document.getElementById('fNuevoModelo').value=''; toast('Categoría creada'); });
+    document.getElementById('btnCrearSubEnProducto').addEventListener('click', ()=>{ const cat=document.getElementById('fNuevaCategoria').value.trim()||document.getElementById('fCategoria').value; const v=document.getElementById('fNuevaSubcategoria').value.trim(); if(!v) return alert('Escribe la subcategoría'); agregarSubSync(cat, document.getElementById('fNuevoModelo').value.trim()||document.getElementById('fModelo').value, v); document.getElementById('fNuevaSubcategoria').value=''; toast('Subcategoría creada'); });
     document.getElementById('btnSave').addEventListener('click', () => {
       const nombre = document.getElementById('fNombre').value.trim();
       const precio = parseFloat(document.getElementById('fPrecio').value);
       const stock = parseInt(document.getElementById('fStock').value, 10);
       let categoria = document.getElementById('fNuevaCategoria').value.trim() || document.getElementById('fCategoria').value;
+      let modelo = document.getElementById('fNuevoModelo').value.trim() || document.getElementById('fModelo').value;
       let subcategoria = document.getElementById('fNuevaSubcategoria').value.trim() || document.getElementById('fSubcategoria').value;
+      if(document.getElementById('fNuevoModelo').value.trim()){ crearModeloSync(categoria, modelo); }
+      if(subcategoria && document.getElementById('fNuevaSubcategoria').value.trim()){ agregarSubSync(categoria, modelo, subcategoria); }
       if(document.getElementById('fNuevaCategoria').value.trim()){ crearCategoriaSync(categoria); }
-      if(subcategoria && document.getElementById('fNuevaSubcategoria').value.trim()){ agregarSubSync(categoria, subcategoria); }
+
       const imagen = document.getElementById('fImagen').value.trim();
       const stockMin = parseInt(document.getElementById('fStockMin').value, 10) || 5;
 
@@ -603,6 +658,7 @@
         precio,
         stock,
         categoria,
+        modelo: modelo || '',
         subcategoria: subcategoria || '',
         stockMin,
         imagen: imagen || null,
