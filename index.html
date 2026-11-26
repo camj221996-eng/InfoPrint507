@@ -697,6 +697,7 @@
           precio: Number(p.precio) || 0,
           stock: Number(p.stock) || 0,
           categoria: p.categoria || 'Otros',
+          modelo: p.modelo || '',
           subcategoria: p.subcategoria || '',
           imagen: p.imagen || null
         })).filter(p => p.precio > 0);
@@ -723,13 +724,18 @@
       const cats = [...new Set([...catsFromFirebase, ...Object.keys(counts)])].sort();
       cats.forEach(c => { if(!(c in counts)) counts[c]=0; });
       const subsByCat = {};
-      Object.values(categoriasFirebase).forEach(c => { if(c.nombre) subsByCat[c.nombre] = [...(c.subcategorias||[])]; });
-      allProducts.forEach(prod => { if(prod.subcategoria){ subsByCat[prod.categoria]=subsByCat[prod.categoria]||[]; if(!subsByCat[prod.categoria].includes(prod.subcategoria)) subsByCat[prod.categoria].push(prod.subcategoria); } });
+      const modelosByCat = {};
+      Object.values(categoriasFirebase).forEach(c => { if(c.nombre){ subsByCat[c.nombre] = [...(c.subcategorias||[])]; modelosByCat[c.nombre] = (c.modelos||[]).map(m=>({nombre:m.nombre, subs:[...(m.subcategorias||[])]})); } });
+      allProducts.forEach(prod => {
+        if(prod.modelo){ modelosByCat[prod.categoria]=modelosByCat[prod.categoria]||[]; if(!modelosByCat[prod.categoria].some(m=>m.nombre===prod.modelo)) modelosByCat[prod.categoria].push({nombre:prod.modelo, subs:[]}); }
+        if(prod.subcategoria && prod.modelo){ const mm=modelosByCat[prod.categoria].find(m=>m.nombre===prod.modelo); if(mm && !mm.subs.includes(prod.subcategoria)) mm.subs.push(prod.subcategoria); }
+        else if(prod.subcategoria){ subsByCat[prod.categoria]=subsByCat[prod.categoria]||[]; if(!subsByCat[prod.categoria].includes(prod.subcategoria)) subsByCat[prod.categoria].push(prod.subcategoria); }
+      });
 
       // Sidebar
       const side = document.getElementById('sidebarCats');
       side.innerHTML = `<div class="sidebar-cat active" data-cat=""><span>Todos</span><span class="count">${allProducts.length}</span></div>` +
-        cats.map(c => `<div class="sidebar-cat" data-cat="${c}"><span>${c}</span><span class="count">${counts[c]}</span></div>` + (subsByCat[c]||[]).map(s=>`<div class="sidebar-cat" data-cat="SUB:${s}" style="padding-left:28px;font-size:12px"><span>› ${s}</span></div>`).join('')).join('');
+        cats.map(c => `<div class="sidebar-cat" data-cat="${c}"><span>${c}</span><span class="count">${counts[c]}</span></div>` + (modelosByCat[c]||[]).map(m=>`<div class="sidebar-cat" data-cat="MODELO:${c}|${m.nombre}" style="padding-left:22px;font-size:13px;font-weight:600"><span>🔹 ${m.nombre}</span></div>` + (m.subs||[]).map(s=>`<div class="sidebar-cat" data-cat="SUB:${c}|${m.nombre}|${s}" style="padding-left:38px;font-size:12px"><span>› ${s}</span></div>`).join('')).join('') + (subsByCat[c]||[]).map(s=>`<div class="sidebar-cat" data-cat="SUB:${c}||${s}" style="padding-left:28px;font-size:12px"><span>› ${s}</span></div>`).join('')).join('');
 
       // Top chips
       const nav = document.getElementById('navCats');
@@ -752,8 +758,13 @@
       const sort = document.getElementById('sortSelect').value;
 
       let list = allProducts.filter(p => {
-        const matchQ = !q || p.nombre.toLowerCase().includes(q) || (p.subcategoria||'').toLowerCase().includes(q) || (p.categoria||'').toLowerCase().includes(q);
-        const matchC = !currentCat || (currentCat.startsWith('SUB:') ? p.subcategoria === currentCat.slice(4) : p.categoria === currentCat);
+        const matchQ = !q || p.nombre.toLowerCase().includes(q) || (p.modelo||'').toLowerCase().includes(q) || (p.subcategoria||'').toLowerCase().includes(q) || (p.categoria||'').toLowerCase().includes(q);
+        let matchC = !currentCat;
+        if(!matchC){
+          if(currentCat.startsWith('MODELO:')){ const parts=currentCat.slice(7).split('|'); matchC = p.categoria===parts[0] && p.modelo===parts[1]; }
+          else if(currentCat.startsWith('SUB:')){ const parts=currentCat.slice(4).split('|'); matchC = p.categoria===parts[0] && p.modelo===(parts[1]||'') && p.subcategoria===parts[2]; }
+          else matchC = p.categoria === currentCat;
+        }
         return matchQ && matchC;
       });
 
