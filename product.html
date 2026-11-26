@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Producto · InfoPrint</title>
-  <link rel="canonical" href="https://camj221996-eng.github.io/InfoPrint507/">
+  <title>Producto · Graphitech</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -64,7 +63,13 @@
       font-size: 20px;
       color: var(--dark);
     }
-    .logo img{height:78px;width:auto;display:block}
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 18px;
+    }
     .back-link {
       color: var(--muted);
       font-size: 13px;
@@ -300,16 +305,18 @@
 <body>
   <div class="topbar">
     <div class="topbar-inner">
-      <span>Envíos a todo Panamá · WhatsApp: <a href="https://wa.me/50760023188" target="_blank">6002-3188</a></span>
+      <span>Envíos a todo Panamá · Tel: <a href="tel:+50760023188">6002-3188</a></span>
+      <span><a href="mailto:impresionesgraphitech@gmail.com">impresionesgraphitech@gmail.com</a></span>
     </div>
   </div>
 
   <header>
     <div class="header-main">
       <a href="index.html" class="logo">
-        <img src="logo.png" alt="InfoPrint">
+        <div class="logo-icon">🖨️</div>
+        <span>Graphitech</span>
       </a>
-      <a href="javascript:goCatalog()" class="back-link">← Volver al catálogo</a>
+      <a href="index.html" class="back-link">← Volver al catálogo</a>
     </div>
   </header>
 
@@ -318,8 +325,9 @@
   </div>
 
   <footer>
-    <p><strong>InfoPrint</strong> · WhatsApp: <a href="https://wa.me/50760023188" target="_blank">6002-3188</a> ·</p>
-    <p style="margin-top:6px;font-size:12px">© 2026 InfoPrint · Panamá</p>
+    <p><strong>Graphitech</strong> · Tel: <a href="tel:+50760023188">6002-3188</a> · 
+      <a href="mailto:impresionesgraphitech@gmail.com">impresionesgraphitech@gmail.com</a></p>
+    <p style="margin-top:6px;font-size:12px">© 2026 Graphitech · Panamá</p>
   </footer>
 
   <div class="toast" id="toast"></div>
@@ -330,7 +338,6 @@
     firebase.initializeApp({ databaseURL: "https://graphitech-web-default-rtdb.firebaseio.com" });
     const db = firebase.database();
 
-    function goCatalog(){ if(history.length>1){ history.back(); } else { location.href='./index.html'; } }
     const params = new URLSearchParams(location.search);
     const productId = params.get('id');
 
@@ -388,7 +395,7 @@
           descripcion: p.descripcion || '',
           formaPago: p.formaPago || ''
         };
-        document.title = product.nombre + ' · InfoPrint';
+        document.title = product.nombre + ' · Graphitech';
         render();
       }).catch(err => {
         document.getElementById('app').innerHTML = '<div class="error">Error al cargar: ' + err.message + '</div>';
@@ -428,7 +435,7 @@
           </div>
 
           <div class="product-info">
-            <div class="product-cat">${esc(product.categoria)}</div>
+            <div class="product-cat">${esc(product.categoria)}${product.modelo ? ` › ${esc(product.modelo)}` : ""}${product.subcategoria ? ` › ${esc(product.subcategoria)}` : ""}</div>
             <h1>${esc(product.nombre)}</h1>
             <div class="product-price">$${product.precio.toFixed(2)} <small>USD</small></div>
             <div class="stock-line">${stockHtml}</div>
@@ -470,10 +477,10 @@
     };
 
     function getCart() {
-      return JSON.parse(localStorage.getItem('infoprint_cart') || '{}');
+      return JSON.parse(localStorage.getItem('graphitech_cart') || '{}');
     }
     function saveCart(cart) {
-      localStorage.setItem('infoprint_cart', JSON.stringify(cart));
+      localStorage.setItem('graphitech_cart', JSON.stringify(cart));
     }
 
     window.addToCart = function() {
@@ -486,6 +493,8 @@
           precio: product.precio,
           stock: product.stock,
           categoria: product.categoria,
+          modelo: product.modelo || '',
+          subcategoria: product.subcategoria || '',
           qty: 0
         };
       }
@@ -498,7 +507,7 @@
     window.buyNow = function() {
       if (!product || product.stock <= 0) return;
       const total = (product.precio * qty).toFixed(2);
-      let msg = `¡Hola InfoPrint! 👋%0AQuiero comprar:%0A%0A`;
+      let msg = `¡Hola Graphitech! 👋%0AQuiero comprar:%0A%0A`;
       msg += `• ${product.nombre} x${qty} = $${total}%0A`;
       msg += `%0A*Total: $${total} USD*%0A%0A¿Me confirman disponibilidad y forma de pago?`;
       window.open(`https://wa.me/50760023188?text=${msg}`, '_blank');
