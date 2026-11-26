@@ -82,6 +82,15 @@
       font-size: 14px;
     }
 
+    .cat-box{background:white;border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:20px}
+    .cat-box h3{font-size:15px;margin-bottom:4px}
+    .cat-box p{font-size:12px;color:#6b7280;margin-bottom:12px}
+    .cat-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+    .cat-row input{padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px}
+    .cat-card{border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;background:#f9fafb}
+    .cat-card b{font-size:14px}
+    .sub-chip{display:inline-flex;gap:6px;align-items:center;background:white;border:1px solid var(--border);border-radius:999px;padding:4px 8px;font-size:12px;margin:4px 4px 0 0}
+    .sub-chip button{border:none;background:none;cursor:pointer;color:#dc2626;font-weight:700}
     /* Table */
     .table-wrap {
       background: white;
@@ -255,6 +264,15 @@
   </header>
 
   <div class="container">
+  <div class="cat-box">
+    <h3>📂 Categorías y subcategorías</h3>
+    <p>Crea una categoría, por ejemplo <b>Impresoras</b>, y dentro de ella sus subcategorías: <b>Plotter, Cabezal, Tintas</b>. Todo se puede editar o borrar.</p>
+    <div class="cat-row">
+      <input type="text" id="newCatName" placeholder="Nueva categoría: Ej: Impresoras" style="flex:1;min-width:200px">
+      <button class="btn btn-primary" id="btnAddCat">+ Crear categoría</button>
+    </div>
+    <div id="catList"></div>
+  </div>
     <div class="toolbar">
       <button class="btn btn-primary" id="btnNew">+ Nuevo producto</button>
       <input type="search" class="search-box" id="searchAdmin" placeholder="Buscar producto...">
@@ -304,20 +322,21 @@
           </div>
         </div>
         <div class="form-group">
-          <label>Categoría</label>
-          <select id="fCategoria">
-            <option value="Tintas">Tintas</option>
-            <option value="Estampado DTF">Estampado DTF</option>
-            <option value="Formato Ancho / Vinil">Formato Ancho / Vinil</option>
-            <option value="Papelería">Papelería</option>
-            <option value="Ropa / Textil">Ropa / Textil</option>
-            <option value="Bolsas">Bolsas</option>
-            <option value="Publicitario">Publicitario</option>
-            <option value="Servicios">Servicios</option>
-            <option value="Rotulación">Rotulación</option>
-            <option value="Stickers">Stickers</option>
-            <option value="Otros">Otros</option>
-          </select>
+          <label>Categoría *</label>
+          <select id="fCategoria"></select>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <input type="text" id="fNuevaCategoria" placeholder="O crea una categoría nueva aquí" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:6px">
+            <button type="button" class="btn btn-outline btn-sm" id="btnCrearCatEnProducto">+ Crear</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Subcategoría</label>
+          <select id="fSubcategoria"><option value="">Sin subcategoría</option></select>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <input type="text" id="fNuevaSubcategoria" placeholder="O crea una subcategoría: Ej: Plotter, Cabezal, Tintas" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:6px">
+            <button type="button" class="btn btn-outline btn-sm" id="btnCrearSubEnProducto">+ Crear</button>
+          </div>
+          <small style="color:#6b7280;font-size:12px">Ejemplo: Categoría <b>Impresoras</b> → Subcategoría <b>Plotter</b> / <b>Cabezal</b> / <b>Tintas</b></small>
         </div>
         <div class="form-group">
           <label>Foto del producto</label>
@@ -354,11 +373,72 @@
     firebase.initializeApp({ databaseURL: "https://graphitech-web-default-rtdb.firebaseio.com" });
     const db = firebase.database();
     const refInv = db.ref('inventario');
+    const refCat = db.ref('categorias');
+    let categorias = {}; // id -> {nombre, subcategorias:[...]}
 
     let products = {};
     let editingId = null;
 
+
+    // ===== CATEGORÍAS Y SUBCATEGORÍAS (editables) =====
+    function getCatByName(nombre){ return Object.entries(categorias).find(([id,c])=>c.nombre===nombre); }
+    function refreshCategoriaSelects(selCat, selSub){
+      const sel=document.getElementById('fCategoria'); if(!sel) return;
+      const names=Object.values(categorias).map(c=>c.nombre).sort();
+      sel.innerHTML = names.length ? names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('') : '<option value="Otros">Otros</option>';
+      if(selCat && names.includes(selCat)) sel.value=selCat;
+      refreshSubSelect(sel.value, selSub);
+    }
+    function refreshSubSelect(catNombre, selSub){
+      const sel=document.getElementById('fSubcategoria'); if(!sel) return;
+      const found=getCatByName(catNombre); const subs=found ? (found[1].subcategorias||[]) : [];
+      sel.innerHTML='<option value="">Sin subcategoría</option>'+subs.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
+      if(selSub && subs.includes(selSub)) sel.value=selSub;
+    }
+    function crearCategoriaSync(nombre){
+      if(!nombre) return; if(getCatByName(nombre)) return;
+      const id=refCat.push().key; categorias[id]={nombre, subcategorias:[]}; refCat.child(id).set({nombre, subcategorias:[]}); renderCats(); refreshCategoriaSelects(nombre);
+    }
+    function agregarSubSync(catNombre, sub){
+      if(!catNombre||!sub) return; const found=getCatByName(catNombre); if(!found) return;
+      const [id,c]=found; const subs=c.subcategorias||[]; if(subs.includes(sub)) return;
+      subs.push(sub); categorias[id].subcategorias=subs; refCat.child(id).update({subcategorias:subs}); renderCats(); refreshSubSelect(catNombre, sub);
+    }
+    function renderCats(){
+      const box=document.getElementById('catList'); if(!box) return;
+      const list=Object.entries(categorias);
+      if(!list.length){ box.innerHTML='<p>No hay categorías todavía. Crea la primera arriba.</p>'; return; }
+      box.innerHTML=list.map(([id,c])=>`
+        <div class="cat-card">
+          <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
+            <b>📂 ${esc(c.nombre)}</b>
+            <span>
+              <button class="btn btn-outline btn-sm" onclick="renombrarCat('${id}')">Editar nombre</button>
+              <button class="btn btn-danger btn-sm" onclick="borrarCat('${id}')">Eliminar</button>
+            </span>
+          </div>
+          <div style="margin-top:8px">${(c.subcategorias||[]).length ? (c.subcategorias||[]).map(s=>`<span class="sub-chip">${esc(s)} <button onclick="borrarSub('${id}','${esc(s)}')">×</button></span>`).join('') : '<small style="color:#6b7280">Sin subcategorías todavía</small>'}</div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <input type="text" id="sub-${id}" placeholder="Nueva subcategoría: Ej: Plotter" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:6px">
+            <button class="btn btn-outline btn-sm" onclick="agregarSubDesdeLista('${id}')">+ Subcategoría</button>
+          </div>
+        </div>`).join('');
+    }
+    window.renombrarCat=function(id){ const nuevo=prompt('Nuevo nombre de categoría:', categorias[id].nombre); if(!nuevo||!nuevo.trim()) return; categorias[id].nombre=nuevo.trim(); refCat.child(id).update({nombre:nuevo.trim()}); renderCats(); refreshCategoriaSelects(); toast('Categoría actualizada'); };
+    window.borrarCat=function(id){ if(!confirm(`¿Eliminar la categoría "${categorias[id].nombre}" y sus subcategorías? Los productos que la usen quedan sin categoría.`)) return; delete categorias[id]; refCat.child(id).remove(); renderCats(); refreshCategoriaSelects(); toast('Categoría eliminada'); };
+    window.borrarSub=function(id,sub){ if(!confirm(`¿Eliminar subcategoría "${sub}"?`)) return; categorias[id].subcategorias=(categorias[id].subcategorias||[]).filter(s=>s!==sub); refCat.child(id).update({subcategorias:categorias[id].subcategorias}); renderCats(); refreshSubSelect(categorias[id].nombre); toast('Subcategoría eliminada'); };
+    window.agregarSubDesdeLista=function(id){ const inp=document.getElementById('sub-'+id); const v=inp.value.trim(); if(!v) return; agregarSubSync(categorias[id].nombre, v); inp.value=''; toast('Subcategoría agregada'); };
+
     function load() {
+      refCat.once('value').then(snap => {
+        categorias = snap.val() || {};
+        if(!Object.keys(categorias).length){
+          // Primeras categorías de ejemplo, editables
+          const seed={c1:{nombre:'Impresoras',subcategorias:['Plotter','Cabezal','Tintas']},c2:{nombre:'Tintas',subcategorias:['Sublimación','DTF','Ecosolvente']},c3:{nombre:'Estampado DTF',subcategorias:[]}};
+          refCat.set(seed); categorias=seed;
+        }
+        renderCats(); refreshCategoriaSelects();
+      });
       refInv.once('value').then(snap => {
         products = snap.val() || {};
         render();
@@ -389,7 +469,7 @@
         return `<tr>
           <td>${img}</td>
           <td><strong>${esc(p.nombre || '')}</strong></td>
-          <td>${esc(p.categoria || '—')}</td>
+          <td>${esc(p.categoria || '—')}${p.subcategoria ? ` <span style='color:#6b7280'>› ${esc(p.subcategoria)}</span>` : ''}</td>
           <td>$${(Number(p.precio) || 0).toFixed(2)}</td>
           <td class="${stockClass}">${p.stock ?? 0}</td>
           <td>
@@ -417,7 +497,7 @@
       document.getElementById('fNombre').value = '';
       document.getElementById('fPrecio').value = '';
       document.getElementById('fStock').value = '';
-      document.getElementById('fCategoria').value = 'Tintas';
+      document.getElementById('fCategoria').innerHTML=''; document.getElementById('fSubcategoria').innerHTML='<option value="">Sin subcategoría</option>'; document.getElementById('fNuevaCategoria').value=''; document.getElementById('fNuevaSubcategoria').value=''; refreshCategoriaSelects();
       document.getElementById('fImagen').value = ''; pendingImagen=''; document.getElementById('fFotoFile').value=''; document.getElementById('fotoPreview').style.display='none';
       document.getElementById('fDescripcion').value = '';
       document.getElementById('fFormaPago').value = '';
@@ -432,7 +512,7 @@
       document.getElementById('fNombre').value = p.nombre || '';
       document.getElementById('fPrecio').value = p.precio || 0;
       document.getElementById('fStock').value = p.stock || 0;
-      document.getElementById('fCategoria').value = p.categoria || 'Otros';
+      refreshCategoriaSelects(p.categoria || '', p.subcategoria || '');
       document.getElementById('fImagen').value = p.imagen || '';
       pendingImagen = p.imagen || '';
       if(p.imagen){ document.getElementById('fotoPreview').style.display='block'; document.getElementById('fotoPreviewImg').src=p.imagen; document.getElementById('fotoPreviewTxt').textContent='Foto actual guardada'; }
@@ -495,11 +575,18 @@
         document.getElementById('fotoPreviewTxt').textContent='✔ Foto lista: '+file.name;
       }catch(err){ alert('No se pudo leer la foto, intenta con otra'); }
     });
+    document.getElementById('btnAddCat').addEventListener('click', ()=>{ const v=document.getElementById('newCatName').value.trim(); if(!v) return alert('Escribe el nombre de la categoría'); crearCategoriaSync(v); document.getElementById('newCatName').value=''; toast('Categoría creada'); });
+    document.getElementById('fCategoria').addEventListener('change', e=>refreshSubSelect(e.target.value));
+    document.getElementById('btnCrearCatEnProducto').addEventListener('click', ()=>{ const v=document.getElementById('fNuevaCategoria').value.trim(); if(!v) return alert('Escribe la categoría'); crearCategoriaSync(v); document.getElementById('fNuevaCategoria').value=''; toast('Categoría creada'); });
+    document.getElementById('btnCrearSubEnProducto').addEventListener('click', ()=>{ const cat=document.getElementById('fNuevaCategoria').value.trim()||document.getElementById('fCategoria').value; const v=document.getElementById('fNuevaSubcategoria').value.trim(); if(!v) return alert('Escribe la subcategoría'); agregarSubSync(cat,v); document.getElementById('fNuevaSubcategoria').value=''; toast('Subcategoría creada'); });
     document.getElementById('btnSave').addEventListener('click', () => {
       const nombre = document.getElementById('fNombre').value.trim();
       const precio = parseFloat(document.getElementById('fPrecio').value);
       const stock = parseInt(document.getElementById('fStock').value, 10);
-      const categoria = document.getElementById('fCategoria').value;
+      let categoria = document.getElementById('fNuevaCategoria').value.trim() || document.getElementById('fCategoria').value;
+      let subcategoria = document.getElementById('fNuevaSubcategoria').value.trim() || document.getElementById('fSubcategoria').value;
+      if(document.getElementById('fNuevaCategoria').value.trim()){ crearCategoriaSync(categoria); }
+      if(subcategoria && document.getElementById('fNuevaSubcategoria').value.trim()){ agregarSubSync(categoria, subcategoria); }
       const imagen = document.getElementById('fImagen').value.trim();
       const stockMin = parseInt(document.getElementById('fStockMin').value, 10) || 5;
 
@@ -516,6 +603,7 @@
         precio,
         stock,
         categoria,
+        subcategoria: subcategoria || '',
         stockMin,
         imagen: imagen || null,
         descripcion: descripcion || '',
