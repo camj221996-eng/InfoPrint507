@@ -654,6 +654,7 @@
     const db = firebase.database();
 
     let allProducts = [];
+    let categoriasFirebase = {}; // id -> {nombre, subcategorias:[]} leidas de Firebase
     let currentCat = '';
     let cart = JSON.parse(localStorage.getItem('infoprint_cart') || '{}');
 
@@ -684,7 +685,11 @@
     }
 
     function loadProducts() {
-      db.ref('inventario').once('value').then(snap => {
+      // Primero leemos las categorías de Firebase, para mostrarlas aunque no tengan productos todavía
+      db.ref('categorias').once('value').then(snapCat => {
+        categoriasFirebase = snapCat.val() || {};
+        return db.ref('inventario').once('value');
+      }).then(snap => {
         const data = snap.val() || {};
         allProducts = Object.entries(data).map(([id, p]) => ({
           id,
@@ -713,8 +718,12 @@
     function buildCategories() {
       const counts = {};
       allProducts.forEach(p => { counts[p.categoria] = (counts[p.categoria] || 0) + 1; });
-      const cats = Object.keys(counts).sort();
+      // Categorías de Firebase mandan: aunque no tengan productos, se muestran
+      const catsFromFirebase = Object.values(categoriasFirebase).map(c => c.nombre).filter(Boolean);
+      const cats = [...new Set([...catsFromFirebase, ...Object.keys(counts)])].sort();
+      cats.forEach(c => { if(!(c in counts)) counts[c]=0; });
       const subsByCat = {};
+      Object.values(categoriasFirebase).forEach(c => { if(c.nombre) subsByCat[c.nombre] = [...(c.subcategorias||[])]; });
       allProducts.forEach(prod => { if(prod.subcategoria){ subsByCat[prod.categoria]=subsByCat[prod.categoria]||[]; if(!subsByCat[prod.categoria].includes(prod.subcategoria)) subsByCat[prod.categoria].push(prod.subcategoria); } });
 
       // Sidebar
@@ -758,7 +767,7 @@
 
       const grid = document.getElementById('productsGrid');
       if (!list.length) {
-        grid.innerHTML = `<div class="state"><div class="icon">🔍</div><p>No se encontraron productos</p></div>`;
+        grid.innerHTML = `<div class="state"><div class="icon">🔍</div><p>No hay productos todavía en esta categoría</p><p style='font-size:13px;color:#6b7280'>Créalo en Admin y asígnalo a esta categoría / subcategoría</p></div>`;
         return;
       }
 
