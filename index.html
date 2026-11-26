@@ -226,6 +226,12 @@
       padding: 1px 7px;
       border-radius: 999px;
     }
+    .cat-group .cat-children{display:none}
+    .cat-group.open > .cat-children{display:block}
+    .cat-model-group .cat-children{display:none}
+    .cat-model-group.open > .cat-children{display:block}
+    .cat-arrow{display:inline-block;width:14px;transition:transform .15s;color:#6b7280}
+    .cat-group.open > .sidebar-cat .cat-arrow,.cat-model-group.open > .sidebar-cat .cat-arrow{transform:rotate(90deg)}
     .sidebar-cat.active .count {
       background: #dbeafe;
       color: var(--primary);
@@ -732,22 +738,78 @@
         else if(prod.subcategoria){ subsByCat[prod.categoria]=subsByCat[prod.categoria]||[]; if(!subsByCat[prod.categoria].includes(prod.subcategoria)) subsByCat[prod.categoria].push(prod.subcategoria); }
       });
 
-      // Sidebar
+      // Sidebar DESPLEGABLE: todo cerrado al inicio, tocas y se abre, vuelves a tocar y se cierra
       const side = document.getElementById('sidebarCats');
       side.innerHTML = `<div class="sidebar-cat active" data-cat=""><span>Todos</span><span class="count">${allProducts.length}</span></div>` +
-        cats.map(c => `<div class="sidebar-cat" data-cat="${c}"><span>${c}</span><span class="count">${counts[c]}</span></div>` + (modelosByCat[c]||[]).map(m=>`<div class="sidebar-cat" data-cat="MODELO:${c}|${m.nombre}" style="padding-left:22px;font-size:13px;font-weight:600"><span>🔹 ${m.nombre}</span></div>` + (m.subs||[]).map(s=>`<div class="sidebar-cat" data-cat="SUB:${c}|${m.nombre}|${s}" style="padding-left:38px;font-size:12px"><span>› ${s}</span></div>`).join('')).join('') + (subsByCat[c]||[]).map(s=>`<div class="sidebar-cat" data-cat="SUB:${c}||${s}" style="padding-left:28px;font-size:12px"><span>› ${s}</span></div>`).join('')).join('');
+        cats.map(c => {
+          const modelosHtml = (modelosByCat[c]||[]).map(m=>`
+            <div class="cat-model-group" data-mgroup="${c}|${m.nombre}">
+              <div class="sidebar-cat cat-model" data-cat="MODELO:${c}|${m.nombre}" style="padding-left:22px;font-size:13px;font-weight:600"><span><span class="cat-arrow">▸</span> 🔹 ${m.nombre}</span></div>
+              <div class="cat-children">
+                ${(m.subs||[]).map(s=>`<div class="sidebar-cat cat-sub" data-cat="SUB:${c}|${m.nombre}|${s}" style="padding-left:42px;font-size:12px"><span>› ${s}</span></div>`).join('')}
+              </div>
+            </div>`).join('');
+          const legacyHtml = (subsByCat[c]||[]).map(s=>`<div class="sidebar-cat cat-sub" data-cat="SUB:${c}||${s}" style="padding-left:28px;font-size:12px"><span>› ${s}</span></div>`).join('');
+          const hasChildren = modelosHtml || legacyHtml;
+          return `<div class="cat-group" data-group="${c}">
+            <div class="sidebar-cat cat-parent" data-cat="${c}"><span>${hasChildren ? '<span class="cat-arrow">▸</span> ' : ''}${c}</span><span class="count">${counts[c]}</span></div>
+            <div class="cat-children">${modelosHtml}${legacyHtml}</div>
+          </div>`;
+        }).join('');
 
       // Top chips
       const nav = document.getElementById('navCats');
       nav.innerHTML = `<div class="cat-chip active" data-cat="">Todos</div>` +
         cats.map(c => `<div class="cat-chip" data-cat="${c}">${c}</div>`).join('');
 
-      // Events
-      document.querySelectorAll('.sidebar-cat, .cat-chip').forEach(el => {
+      // Events - desplegable
+      function setActive(cat){
+        document.querySelectorAll('.sidebar-cat, .cat-chip').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('.sidebar-cat, .cat-chip').forEach(x => { if(x.dataset.cat===cat) x.classList.add('active'); });
+      }
+      // Clic en categoría: abre/cierra + muestra sus productos
+      side.querySelectorAll('.cat-parent').forEach(el=>{
+        el.addEventListener('click', ()=>{
+          const group=el.closest('.cat-group');
+          const wasOpen=group.classList.contains('open');
+          // Si tocas otra categoría, esa se abre y las demás se cierran
+          document.querySelectorAll('.cat-group').forEach(g=>g.classList.remove('open'));
+          if(!wasOpen) group.classList.add('open');
+          currentCat=el.dataset.cat; setActive(currentCat); render();
+        });
+      });
+      // Clic en modelo: abre/cierra sus piezas + muestra solo ese modelo
+      side.querySelectorAll('.cat-model').forEach(el=>{
+        el.addEventListener('click', (e)=>{
+          e.stopPropagation();
+          const mg=el.closest('.cat-model-group');
+          const wasOpen=mg.classList.contains('open');
+          // Abrir también la categoría padre
+          el.closest('.cat-group').classList.add('open');
+          mg.closest('.cat-group').querySelectorAll('.cat-model-group').forEach(g=>g.classList.remove('open'));
+          if(!wasOpen) mg.classList.add('open');
+          currentCat=el.dataset.cat; setActive(currentCat); render();
+        });
+      });
+      // Clic en pieza: solo esa pieza
+      side.querySelectorAll('.cat-sub').forEach(el=>{
+        el.addEventListener('click', (e)=>{
+          e.stopPropagation();
+          el.closest('.cat-group').classList.add('open');
+          const mg=el.closest('.cat-model-group'); if(mg) mg.classList.add('open');
+          currentCat=el.dataset.cat; setActive(currentCat); render();
+        });
+      });
+      // Clic en Todos
+      side.querySelector('.sidebar-cat[data-cat=""]').addEventListener('click', ()=>{
+        document.querySelectorAll('.cat-group').forEach(g=>g.classList.remove('open'));
+        currentCat=''; setActive(''); render();
+      });
+      // Chips de arriba: también abren su categoría
+      document.querySelectorAll('.cat-chip').forEach(el => {
         el.addEventListener('click', () => {
-          currentCat = el.dataset.cat;
-          document.querySelectorAll('.sidebar-cat, .cat-chip').forEach(x => x.classList.remove('active'));
-          document.querySelectorAll('.sidebar-cat, .cat-chip').forEach(x => { if(x.dataset.cat===currentCat) x.classList.add('active'); });
+          currentCat = el.dataset.cat; setActive(currentCat);
+          document.querySelectorAll('.cat-group').forEach(g=>{ g.classList.toggle('open', g.dataset.group===currentCat); });
           render();
         });
       });
