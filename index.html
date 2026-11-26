@@ -691,7 +691,8 @@
           nombre: p.nombre || 'Sin nombre',
           precio: Number(p.precio) || 0,
           stock: Number(p.stock) || 0,
-          categoria: normalizeCategory(p.categoria),
+          categoria: p.categoria || 'Otros',
+          subcategoria: p.subcategoria || '',
           imagen: p.imagen || null
         })).filter(p => p.precio > 0);
 
@@ -713,11 +714,13 @@
       const counts = {};
       allProducts.forEach(p => { counts[p.categoria] = (counts[p.categoria] || 0) + 1; });
       const cats = Object.keys(counts).sort();
+      const subsByCat = {};
+      allProducts.forEach(prod => { if(prod.subcategoria){ subsByCat[prod.categoria]=subsByCat[prod.categoria]||[]; if(!subsByCat[prod.categoria].includes(prod.subcategoria)) subsByCat[prod.categoria].push(prod.subcategoria); } });
 
       // Sidebar
       const side = document.getElementById('sidebarCats');
       side.innerHTML = `<div class="sidebar-cat active" data-cat=""><span>Todos</span><span class="count">${allProducts.length}</span></div>` +
-        cats.map(c => `<div class="sidebar-cat" data-cat="${c}"><span>${c}</span><span class="count">${counts[c]}</span></div>`).join('');
+        cats.map(c => `<div class="sidebar-cat" data-cat="${c}"><span>${c}</span><span class="count">${counts[c]}</span></div>` + (subsByCat[c]||[]).map(s=>`<div class="sidebar-cat" data-cat="SUB:${s}" style="padding-left:28px;font-size:12px"><span>› ${s}</span></div>`).join('')).join('');
 
       // Top chips
       const nav = document.getElementById('navCats');
@@ -729,7 +732,7 @@
         el.addEventListener('click', () => {
           currentCat = el.dataset.cat;
           document.querySelectorAll('.sidebar-cat, .cat-chip').forEach(x => x.classList.remove('active'));
-          document.querySelectorAll(`[data-cat="${currentCat}"]`).forEach(x => x.classList.add('active'));
+          document.querySelectorAll('.sidebar-cat, .cat-chip').forEach(x => { if(x.dataset.cat===currentCat) x.classList.add('active'); });
           render();
         });
       });
@@ -740,8 +743,8 @@
       const sort = document.getElementById('sortSelect').value;
 
       let list = allProducts.filter(p => {
-        const matchQ = !q || p.nombre.toLowerCase().includes(q);
-        const matchC = !currentCat || p.categoria === currentCat;
+        const matchQ = !q || p.nombre.toLowerCase().includes(q) || (p.subcategoria||'').toLowerCase().includes(q) || (p.categoria||'').toLowerCase().includes(q);
+        const matchC = !currentCat || (currentCat.startsWith('SUB:') ? p.subcategoria === currentCat.slice(4) : p.categoria === currentCat);
         return matchQ && matchC;
       });
 
